@@ -2,6 +2,12 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "AccidentalFish.FSharp.Validation", "src\AccidentalFish.FSharp.Validation\AccidentalFish.FSharp.Validation.fsproj", "{9F04CFF5-D2FB-43CA-B8D6-CD1833A58F89}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{46D1F7C1-4D13-481C-A5C0-6D6BCA091C0D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{1847E048-10B0-4D25-B0BB-90DF188017E8}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Demo", "samples\Demo\Demo.fsproj", "{C5E5BF89-6960-47AA-BF70-77E0FBA0E07D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +18,13 @@ Global
 		{9F04CFF5-D2FB-43CA-B8D6-CD1833A58F89}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9F04CFF5-D2FB-43CA-B8D6-CD1833A58F89}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9F04CFF5-D2FB-43CA-B8D6-CD1833A58F89}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5E5BF89-6960-47AA-BF70-77E0FBA0E07D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5E5BF89-6960-47AA-BF70-77E0FBA0E07D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5E5BF89-6960-47AA-BF70-77E0FBA0E07D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5E5BF89-6960-47AA-BF70-77E0FBA0E07D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9F04CFF5-D2FB-43CA-B8D6-CD1833A58F89} = {46D1F7C1-4D13-481C-A5C0-6D6BCA091C0D}
+		{C5E5BF89-6960-47AA-BF70-77E0FBA0E07D} = {1847E048-10B0-4D25-B0BB-90DF188017E8}
 	EndGlobalSection
 EndGlobal
