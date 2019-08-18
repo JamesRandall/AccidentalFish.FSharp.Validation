@@ -260,11 +260,32 @@ let main _ =
     { value = 150 ; discountPercentage = 10; discountExplanation = "An explanation" } |> discountOrderValidatorWithValidatorWhen |> outputToConsole
     
     
-    let optionalValidator = createValidatorFor<OptionalExample>() {
-        validate (fun o -> o.message) [
-            
+    let optionalRequiredValidator = createValidatorFor<OptionalExample>() {
+        validateRequired (fun o -> o.message) [
+            hasMaxLengthOf 10
         ]
     }
+    
+    printf "Should fail due to missing message\n"
+    { value= 10 ; message = None } |> optionalRequiredValidator |> outputToConsole
+    printf "Should fail due to having a message but it being too long\n"
+    { value= 10 ; message = Some "0123456789a" } |> optionalRequiredValidator |> outputToConsole
+    printf "Should pass due to having a message and it being within the length constraint\n"
+    { value= 10 ; message = Some "0123456789" } |> optionalRequiredValidator |> outputToConsole
+    
+    
+    let optionalUnrequiredValidator = createValidatorFor<OptionalExample>() {
+        validateUnrequired (fun o -> o.message) [
+            hasMaxLengthOf 10
+        ]
+    }
+    
+    printf "Should succeed with missing message\n"
+    { value= 10 ; message = None } |> optionalUnrequiredValidator |> outputToConsole
+    printf "Should fail due to having a message but it being too long\n"
+    { value= 10 ; message = Some "0123456789a" } |> optionalUnrequiredValidator |> outputToConsole
+    printf "Should pass due to having a message and it being within the length constraint\n"
+    { value= 10 ; message = Some "0123456789" } |> optionalUnrequiredValidator |> outputToConsole
     
     0
 

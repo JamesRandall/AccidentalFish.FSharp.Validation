@@ -289,6 +289,14 @@ let validator = createValidatorFor<DiscountOrder>() {
 }
 ```
 
+## Option Types
+
+To deal with option types in records use _validateRequired, validateUnrequired, validateRequiredWhen and validateUnrequiredWhen_ instead of the already introduced _validate_ and _validateWhen_ commands.
+
+_validateRequired_ and _validateRequiredWhen_ will apply the validators if the option type is Some. If the option type is None then a validation error will be generated.
+
+_validateUnrequired_ and _validateUnrequiredWhen_ will apply the validators if the option type is Some but if the option type is None it will not generate a validation error, it simply won't run the validators.
+
 
 ## Built-in Validators
 
