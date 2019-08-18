@@ -1,7 +1,6 @@
 ﻿namespace AccidentalFish.FSharp
 open System
 open System.Linq.Expressions
-open System.Runtime.InteropServices
 
 module Validation =
     type ValidationItem =
@@ -60,14 +59,12 @@ module Validation =
         fun (value:obj) -> predicate (value :?> 'targetType)
                 
     type ValidatorBuilder<'targetType>() =
-        member __.Yield (_: unit) : ValidatorConfig<'targetType> =
-            {
-                properties = []                    
-            }
+        member __.Yield (_: unit) : PropertyValidatorConfig list   =
+            []
             
-        member __.Run (config: ValidatorConfig<'targetType>) =
+        member __.Run (config: PropertyValidatorConfig list  ) =
             let execValidation (record:'targetType) : ValidationState =
-                let results = config.properties
+                let results = config
                               |> Seq.filter (fun p -> p.predicate(record :> obj))
                               |> Seq.map(fun p -> p.validators |> Seq.map (fun v -> v(record)))
                               |> Seq.concat
@@ -80,67 +77,75 @@ module Validation =
             execValidation
             
         [<CustomOperation("validate")>]
-        member this.validate (config: ValidatorConfig<'targetType>,
+        member this.validate (config: PropertyValidatorConfig list,
                               propertyGetter:Expression<Func<'targetType,'propertyType>>,
                               validatorFunctions:(string -> 'propertyType -> ValidationState) list) =
-             { config with properties =
-                            config.properties |> Seq.append [{
-                                predicate = (fun _ -> true) |> packagePredicate 
-                                validators = validatorFunctions |> Seq.map (packageValidator propertyGetter) |> Seq.toList
-                            }] |> Seq.toList }
+            config
+            |> Seq.append [
+                {
+                    predicate = (fun _ -> true) |> packagePredicate 
+                    validators = validatorFunctions |> Seq.map (packageValidator propertyGetter) |> Seq.toList
+                }
+            ] |> Seq.toList
              
         [<CustomOperation("validateRequired")>]
-        member this.validateRequired (config: ValidatorConfig<'targetType>,
+        member this.validateRequired (config: PropertyValidatorConfig list,
                                       propertyGetter:Expression<Func<'targetType,'propertyType option>>,
                                       validatorFunctions:(string -> 'propertyType -> ValidationState) list) =
-             { config with properties =
-                            config.properties |> Seq.append [{
-                                predicate = (fun _ -> true) |> packagePredicate 
-                                validators = validatorFunctions |> Seq.map (packageValidatorRequired propertyGetter) |> Seq.toList
-                            }] |> Seq.toList }
+            config
+            |> Seq.append [
+                {
+                    predicate = (fun _ -> true) |> packagePredicate 
+                    validators = validatorFunctions |> Seq.map (packageValidatorRequired propertyGetter) |> Seq.toList
+                }
+            ] |> Seq.toList
              
         [<CustomOperation("validateUnrequired")>]
-        member this.validateUnrequired (config: ValidatorConfig<'targetType>,
+        member this.validateUnrequired (config: PropertyValidatorConfig list,
                                         propertyGetter:Expression<Func<'targetType,'propertyType option>>,
                                         validatorFunctions:(string -> 'propertyType -> ValidationState) list) =
-             { config with properties =
-                            config.properties |> Seq.append [{
-                                predicate = (fun _ -> true) |> packagePredicate 
-                                validators = validatorFunctions |> Seq.map (packageValidatorUnrequired propertyGetter) |> Seq.toList
-                            }] |> Seq.toList }
+            config
+            |> Seq.append [{
+                predicate = (fun _ -> true) |> packagePredicate 
+                validators = validatorFunctions |> Seq.map (packageValidatorUnrequired propertyGetter) |> Seq.toList
+            }]
+            |> Seq.toList
         
         [<CustomOperation("validateWhen")>]     
-        member this.validateWhen (config: ValidatorConfig<'targetType>,
+        member this.validateWhen (config: PropertyValidatorConfig list,
                                   predicate:('targetType -> bool),
                                   propertyGetter:Expression<Func<'targetType,'propertyType>>,
-                                  validatorFunctions:(string -> 'propertyType -> ValidationState) list) =
-            { config with properties =
-                            config.properties |> Seq.append [{
-                                predicate = predicate |> packagePredicate
-                                validators = validatorFunctions |> Seq.map (packageValidator propertyGetter) |> Seq.toList
-                            }] |> Seq.toList }
+                                  validatorFunctions:(string -> 'propertyType -> ValidationState) list) =            
+            config
+            |> Seq.append [{
+                predicate = predicate |> packagePredicate
+                validators = validatorFunctions |> Seq.map (packageValidator propertyGetter) |> Seq.toList
+            }]
+            |> Seq.toList 
             
         [<CustomOperation("validateRequiredWhen")>]     
-        member this.validateRequiredWhen (config: ValidatorConfig<'targetType>,
+        member this.validateRequiredWhen (config: PropertyValidatorConfig list,
                                           predicate:('targetType -> bool),
                                           propertyGetter:Expression<Func<'targetType,'propertyType option>>,
                                           validatorFunctions:(string -> 'propertyType -> ValidationState) list) =
-            { config with properties =
-                            config.properties |> Seq.append [{
-                                predicate = predicate |> packagePredicate
-                                validators = validatorFunctions |> Seq.map (packageValidatorRequired propertyGetter) |> Seq.toList
-                            }] |> Seq.toList }
+            config
+            |> Seq.append [{
+                predicate = predicate |> packagePredicate
+                validators = validatorFunctions |> Seq.map (packageValidatorRequired propertyGetter) |> Seq.toList
+            }]
+            |> Seq.toList
             
         [<CustomOperation("validateUnrequiredWhen")>]     
-        member this.validateUnrequiredWhen (config: ValidatorConfig<'targetType>,
+        member this.validateUnrequiredWhen (config: PropertyValidatorConfig list,
                                             predicate:('targetType -> bool),
                                             propertyGetter:Expression<Func<'targetType,'propertyType option>>,
                                             validatorFunctions:(string -> 'propertyType -> ValidationState) list) =
-            { config with properties =
-                            config.properties |> Seq.append [{
-                                predicate = predicate |> packagePredicate
-                                validators = validatorFunctions |> Seq.map (packageValidatorUnrequired propertyGetter) |> Seq.toList
-                            }] |> Seq.toList }
+            config
+            |> Seq.append [{
+                predicate = predicate |> packagePredicate
+                validators = validatorFunctions |> Seq.map (packageValidatorUnrequired propertyGetter) |> Seq.toList
+            }]
+            |> Seq.toList
             
              
     // General validators
