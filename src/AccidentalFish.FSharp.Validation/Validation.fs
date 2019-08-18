@@ -96,14 +96,32 @@ module Validation =
             | false -> Errors([{ message = sprintf "Must have a maximum value of %O" maxValue; property = propertyName ; errorCode = "hasMaxValueOf" }])
         comparator
         
-    // String validators        
-    let isNotEmpty propertyName (value:string) =
+    // Collection validators
+    let isNotEmpty propertyName (value:seq<'item>) = // this also applies to strings
         if isNull(value) then
             Errors([{ message = "Must not be null"; property = propertyName ; errorCode = "isNotEmpty" }])
+        elif (Seq.length value) = 0 then
+            Errors([{ message = "Must not be empty"; property = propertyName ; errorCode = "isNotEmpty" }])        
+        else
+            Ok
+            
+    let eachItemWith (validatorFunc:('validatorTargetType->ValidationState)) =
+        let comparator _ (items:seq<'validatorTargetType>) =
+            let allResults = items |> Seq.map (fun item -> validatorFunc item)
+            let failures = allResults |> Seq.map (fun r -> match r with Ok -> [] | Errors e -> e) |> Seq.concat |> Seq.toList
+            match failures.Length with
+            | 0 -> Ok
+            | _ -> Errors(failures)
+        comparator
+        
+    // String validators        
+    let isNotEmptyOrWhitespace propertyName (value:string) =
+        if isNull(value) then
+            Errors([{ message = "Must not be null"; property = propertyName ; errorCode = "isNotEmptyOrWhitespace" }])
         elif String.IsNullOrEmpty(value) then
-            Errors([{ message = "Must not be empty"; property = propertyName ; errorCode = "isNotEmpty" }])
+            Errors([{ message = "Must not be empty"; property = propertyName ; errorCode = "isNotEmptyOrWhitespace" }])
         elif String.IsNullOrWhiteSpace(value) then
-            Errors([{ message = "Must not be whitespace"; property = propertyName ; errorCode = "isNotEmpty" }])
+            Errors([{ message = "Must not be whitespace"; property = propertyName ; errorCode = "isNotEmptyOrWhitespace" }])
         else
             Ok
         

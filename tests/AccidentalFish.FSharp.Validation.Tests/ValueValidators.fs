@@ -121,10 +121,10 @@ let hasMaxValueOfTests =
     ]
 
 [<Tests>]
-let isNotEmptyTests =
-    testList "isNotEmpty tests" [
+let isNotEmptyOrWhitespaceTests =
+    testList "isNotEmptyOrWhitespace tests" [
         test "Returns ok when string is not empty" {
-            let comparator = isNotEmpty
+            let comparator = isNotEmptyOrWhitespace
             
             let result = comparator propertyName "thanksforallthefish"
             
@@ -132,27 +132,27 @@ let isNotEmptyTests =
         }
         
         test "Return error when string is null" {
-            let comparator = isNotEmpty
+            let comparator = isNotEmptyOrWhitespace
             
             let result = comparator propertyName null
             
-            result |> expectErrorWithMessage "Must not be null" "isNotEmpty"
+            result |> expectErrorWithMessage "Must not be null" "isNotEmptyOrWhitespace"
         }
         
         test "Return error when string is whitespace" {
-            let comparator = isNotEmpty
+            let comparator = isNotEmptyOrWhitespace
             
             let result = comparator propertyName "  "
             
-            result |> expectErrorWithMessage "Must not be whitespace" "isNotEmpty"
+            result |> expectErrorWithMessage "Must not be whitespace" "isNotEmptyOrWhitespace"
         }
         
         test "Return error when string is zero length" {
-            let comparator = isNotEmpty
+            let comparator = isNotEmptyOrWhitespace
             
             let result = comparator propertyName ""
             
-            result |> expectErrorWithMessage "Must not be empty" "isNotEmpty"
+            result |> expectErrorWithMessage "Must not be empty" "isNotEmptyOrWhitespace"
         }
     ]
     
