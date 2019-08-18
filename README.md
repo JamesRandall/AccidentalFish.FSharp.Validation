@@ -3,6 +3,8 @@ AccidentalFish.FSharp.Validation
 
 A simple and extensible declarative validation framework for F#.
 
+A [sample console app](https://github.com/JamesRandall/AccidentalFish.FSharp.Validation/tree/master/samples/Demo) is available demonstrating basic usage.
+
 For issues and help please log them in the [Issues area](https://github.com/JamesRandall/AccidentalFish.FSharp.Validation/issues) or contact me on [Twitter](https://twitter.com/azuretrenches).
 
 You can also check out [my blog](https://www.azurefromthetrenches.com) for other .NET projects, articles, and cloud develoment.
@@ -152,9 +154,78 @@ Again the property fields in the error items will be fully qualified and contain
     items.[0].productName
 
 
-## Built-in Validators
+## Built-in Property Validators
 
+The library includes a number of basic value validators (as seen in the examples above):
 
+|Validator|Description|
+|-|-|
+|isEqualTo _expected_|Is the tested value equal to the expected value|
+|isNotEqualTo _unexpected_|Is the tested value not equal to the unexpected value|
+|hasMinValueOf _minValue_|Is the tested value greater than or equal to _minValue_|
+|hasMaxValueOf _maxValue_|Is the tested value greater tahn or equal to _maxValue_|
+|isNotEmpty|Is the sequence (including a string) not empty|
+|eachItemWith _validator_|Apply _validator_ to each item in a sequence|
+|hasLengthOf _length_|Is the sequence (including a string) of length _length_|
+|hasMinLengthOf _length_|Is the sequence (including a string) of a minimum length of _length_|
+|hasMaxLengthOf _length_|Is the sequence (including a string) of a maximum length of _length_|
+|isNotEmptyOrWhitespace _value_|Is the tested value not empty and not whitespace|
+|withValidator _validator_|Applies the specified validator to the property. Is an alias of _withFunction_|
+|withFunction _function_|Apples the given function to the property. The function must have a signature of _'validatorTargetType -> ValidationState_|
+
+I'll expand on this set over time. In the meantime it is easy to add additional validators as shown below.
 
 ## Adding Custom Validators
 
+Its easy to add custom validators as all they are are functions with the signature _string -> 'a -> ValidationState_. The first parameter is the name of the property that the validator is being applied to and the second the value. We then return the validation state.
+
+For example lets say we want to write a validator function for a discriminated union and a model that uses it:
+
+```fsharp
+type TrafficLightColor = | Red | Green | Blue
+
+type TrafficLight =
+    {
+        color: TrafficLightColor
+    }
+```
+
+To check if the traffic light is green we could write a validator as follows:
+
+```fsharp
+let isGreen propertyName value =
+    match value with
+    | Green -> Ok
+    | _ -> Errors([{ errorCode="isGreen" ; message="The light was not green" ; property = propertyName }])
+```
+
+And we could use it like any other validator:
+
+```fsharp
+let trafficLightValidator = createValidatorFor<TrafficLight>() {
+    validate (fun r -> r.color) [
+        isGreen
+    ]
+}
+```
+
+If we want to be able to supply parameters to the validator then we need to write a function that returns our validator function. For example if we want to be able to specify the color we could write a validator as follows:
+
+```fsharp
+let isColor color =
+    let comparator propertyName value =
+        match value = color with
+        | true -> Ok
+        | false -> Errors([{ errorCode="isColor" ; message=sprintf "The light was not %O" value ; property = propertyName }])
+    comparator
+```
+
+And then we can use it like any other validator:
+
+```fsharp
+let trafficLightValidator = createValidatorFor<TrafficLight>() {
+    validate (fun r -> r.color) [
+        isColor Amber
+    ]
+}
+```

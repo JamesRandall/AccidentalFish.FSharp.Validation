@@ -124,6 +124,27 @@ module Validation =
             | _ -> Errors(failures)
         comparator
         
+    let hasLengthOf length =
+        let comparator propertyName (value:seq<'item>) =
+            match (Seq.length value) = length with
+            | true -> Ok
+            | false -> Errors([{ message = sprintf "Must have a length of %O" length; property = propertyName ; errorCode = "hasLengthOf" }])
+        comparator
+        
+    let hasMinLengthOf length =
+        let comparator propertyName (value:seq<'item>) =
+            match (Seq.length value) >= length with
+            | true -> Ok
+            | false -> Errors([{ message = sprintf "Must have a length no less than %O" length; property = propertyName ; errorCode = "hasMinLengthOf" }])
+        comparator
+        
+    let hasMaxLengthOf length =
+        let comparator propertyName (value:seq<'item>) =
+            match (Seq.length value) <= length with
+            | true -> Ok
+            | false -> Errors([{ message = sprintf "Must have a length no greater than %O" length; property = propertyName ; errorCode = "hasMaxLengthOf" }])
+        comparator
+        
     // String validators        
     let isNotEmptyOrWhitespace propertyName (value:string) =
         if isNull(value) then
@@ -134,28 +155,7 @@ module Validation =
             Errors([{ message = "Must not be whitespace"; property = propertyName ; errorCode = "isNotEmptyOrWhitespace" }])
         else
             Ok
-        
-    let hasLengthOf length =
-        let comparator propertyName (value:string) =
-            match value.Length = length with
-            | true -> Ok
-            | false -> Errors([{ message = sprintf "Must have a length of %O" length; property = propertyName ; errorCode = "hasLengthOf" }])
-        comparator
-        
-    let hasMinLengthOf length =
-        let comparator propertyName (value:string) =
-            match value.Length >= length with
-            | true -> Ok
-            | false -> Errors([{ message = sprintf "Must have a length no less than %O" length; property = propertyName ; errorCode = "hasMinLengthOf" }])
-        comparator
-        
-    let hasMaxLengthOf length =
-        let comparator propertyName (value:string) =
-            match value.Length <= length with
-            | true -> Ok
-            | false -> Errors([{ message = sprintf "Must have a length no greater than %O" length; property = propertyName ; errorCode = "hasMaxLengthOf" }])
-        comparator
-        
+                
     // Function / sub-validators
     let withFunction (validatorFunc:('validatorTargetType->ValidationState)) =
         let comparator _ (value:'validatorTargetType) =

@@ -21,6 +21,12 @@ type Order =
         cost: double
         items: OrderItem list
     }
+    
+type TrafficLightColor = | Red | Green | Amber
+
+type TrafficLight = {
+    color: TrafficLightColor
+}
 
 [<EntryPoint>]
 let main _ =
@@ -108,7 +114,30 @@ let main _ =
     
     // Test the validator
     inValidNewOrder |> validateOrderWithDeepReferences |> outputToConsole
-    validNewOrder |> validateOrderWithDeepReferences |> outputToConsole    
+    validNewOrder |> validateOrderWithDeepReferences |> outputToConsole
+    
+    
+    // Traffic light validation
+    
+    let isGreen propertyName value =
+        match value with
+        | Green -> Ok
+        | _ -> Errors([{ errorCode="isGreen" ; message="The light was not green" ; property = propertyName }])
+        
+    let isColor color =
+        let comparator propertyName value =
+            match value = color with
+            | true -> Ok
+            | false -> Errors([{ errorCode="isColor" ; message=sprintf "The light was not %O" value ; property = propertyName }])
+        comparator
+    
+    let trafficLightValidator = createValidatorFor<TrafficLight>() {
+        validate (fun r -> r.color) [
+            isColor Green
+        ]
+    }
+    
+    { color = Amber } |> trafficLightValidator |> outputToConsole
     
     0
 
