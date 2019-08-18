@@ -106,9 +106,19 @@ module Validation =
             Ok
             
     let eachItemWith (validatorFunc:('validatorTargetType->ValidationState)) =
-        let comparator _ (items:seq<'validatorTargetType>) =
-            let allResults = items |> Seq.map (fun item -> validatorFunc item)
-            let failures = allResults |> Seq.map (fun r -> match r with Ok -> [] | Errors e -> e) |> Seq.concat |> Seq.toList
+        let buildIndexedPropertyName rootPropertyName index error =
+            { error with property = sprintf "%s.[%d].%s" rootPropertyName index error.property }
+        
+        let comparator propertyName (items:seq<'validatorTargetType>) =
+            let allResults = items |> Seq.mapi (fun index item -> (validatorFunc item),index)
+            let failures = allResults
+                           |> Seq.map (fun r -> match r with
+                                                | (Ok,_) -> []
+                                                | (Errors errors, index) ->
+                                                     errors
+                                                     |> Seq.map (buildIndexedPropertyName propertyName index)
+                                                     |> Seq.toList)
+                           |> Seq.concat |> Seq.toList
             match failures.Length with
             | 0 -> Ok
             | _ -> Errors(failures)
