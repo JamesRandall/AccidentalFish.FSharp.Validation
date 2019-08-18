@@ -20,11 +20,6 @@ module Validation =
             validators: (obj -> ValidationState) list
         }
     
-    type ValidatorConfig<'targetType> =
-        {
-            properties: PropertyValidatorConfig list       
-        }
-        
     let private getPropertyPath (expression:Expression<Func<'commandType, 'propertyType>>) =
         let objectQualifiedExpression = expression.Body.ToString()
         let indexOfDot = objectQualifiedExpression.IndexOf('.')
