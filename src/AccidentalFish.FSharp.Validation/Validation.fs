@@ -1,6 +1,7 @@
 ﻿namespace AccidentalFish.FSharp
 open System
 open System.Linq.Expressions
+open System.Runtime.InteropServices
 
 module Validation =
     type ValidationItem =
@@ -16,6 +17,7 @@ module Validation =
        
     type PropertyValidatorConfig =
         {
+            predicate: (obj -> bool)
             validators: (obj -> ValidationState) list
         }
     
@@ -36,7 +38,10 @@ module Validation =
         let propertyName = propertyGetterExpr |> getPropertyPath
         
         let propertyGetter = propertyGetterExpr.Compile()                
-        fun (value:obj) -> validator propertyName (propertyGetter.Invoke(value :?> 'targetType)) 
+        fun (value:obj) -> validator propertyName (propertyGetter.Invoke(value :?> 'targetType))
+        
+    let private packagePredicate (predicate:('targetType -> bool)) =
+        fun (value:obj) -> predicate (value :?> 'targetType)
                 
     type ValidatorBuilder<'targetType>() =
         member __.Yield (_: unit) : ValidatorConfig<'targetType> =
@@ -47,6 +52,7 @@ module Validation =
         member __.Run (config: ValidatorConfig<'targetType>) =
             let execValidation (record:'targetType) : ValidationState =
                 let results = config.properties
+                              |> Seq.filter (fun p -> p.predicate(record :> obj))
                               |> Seq.map(fun p -> p.validators |> Seq.map (fun v -> v(record)))
                               |> Seq.concat
                               |> Seq.map(fun f -> match f with | Errors e -> e | _ -> [])
@@ -63,8 +69,21 @@ module Validation =
                               validatorFunctions:(string -> 'propertyType -> ValidationState) list) =
              { config with properties =
                             config.properties |> Seq.append [{
+                                predicate = (fun _ -> true) |> packagePredicate 
                                 validators = validatorFunctions |> Seq.map (packageValidator propertyGetter) |> Seq.toList
                             }] |> Seq.toList }
+        
+        [<CustomOperation("validateWhen")>]     
+        member this.validateWhen (config: ValidatorConfig<'targetType>,
+                                  predicate:('targetType -> bool),
+                                  propertyGetter:Expression<Func<'targetType,'propertyType>>,
+                                  validatorFunctions:(string -> 'propertyType -> ValidationState) list) =
+            { config with properties =
+                            config.properties |> Seq.append [{
+                                predicate = predicate |> packagePredicate
+                                validators = validatorFunctions |> Seq.map (packageValidator propertyGetter) |> Seq.toList
+                            }] |> Seq.toList }
+            
              
     // General validators
     let isEqualTo comparisonValue =
@@ -82,18 +101,32 @@ module Validation =
         comparator
     
     // Numeric validators    
-    let hasMinValueOf minValue =
+    let isGreaterThanOrEqualTo minValue =
         let comparator propertyName value =
             match value >= minValue with
             | true -> Ok
-            | false -> Errors([{ message = sprintf "Must have a minimum value of %O" minValue; property = propertyName ; errorCode = "hasMinValueOf" }])
+            | false -> Errors([{ message = sprintf "Must have a minimum value of %O" minValue; property = propertyName ; errorCode = "isGreaterThanOrEqualTo" }])
         comparator
         
-    let hasMaxValueOf maxValue =
+    let isGreaterThan minValue =
+        let comparator propertyName value =
+            match value > minValue with
+            | true -> Ok
+            | false -> Errors([{ message = sprintf "Must be greater than %O" minValue; property = propertyName ; errorCode = "isGreaterThan" }])
+        comparator
+        
+    let isLessThanOrEqualTo maxValue =
         let comparator propertyName value =
             match value <= maxValue with
             | true -> Ok 
-            | false -> Errors([{ message = sprintf "Must have a maximum value of %O" maxValue; property = propertyName ; errorCode = "hasMaxValueOf" }])
+            | false -> Errors([{ message = sprintf "Must have a maximum value of %O" maxValue; property = propertyName ; errorCode = "isLessThanOrEqualTo" }])
+        comparator
+        
+    let isLessThan lessThanValue =
+        let comparator propertyName value =
+            match value < lessThanValue with
+            | true -> Ok 
+            | false -> Errors([{ message = sprintf "Must be less than %O" lessThanValue; property = propertyName ; errorCode = "isLessThan" }])
         comparator
         
     // Collection validators
@@ -102,6 +135,12 @@ module Validation =
             Errors([{ message = "Must not be null"; property = propertyName ; errorCode = "isNotEmpty" }])
         elif (Seq.length value) = 0 then
             Errors([{ message = "Must not be empty"; property = propertyName ; errorCode = "isNotEmpty" }])        
+        else
+            Ok
+            
+    let isEmpty propertyName (value:seq<'item>) = // this also applies to strings
+        if not ( isNull(value) || (Seq.length value) = 0) then
+            Errors([{ message = "Must be empty"; property = propertyName ; errorCode = "isEmpty" }])                
         else
             Ok
             
@@ -160,6 +199,13 @@ module Validation =
     let withFunction (validatorFunc:('validatorTargetType->ValidationState)) =
         let comparator _ (value:'validatorTargetType) =
             validatorFunc value            
+        comparator
+        
+    let withValidatorWhen (predicate:'validatorTargetType->bool) (validatorFunc:('validatorTargetType->ValidationState)) =
+        let comparator _ (value:'validatorTargetType) =
+            match predicate(value) with
+            | true -> validatorFunc value
+            | false -> Ok            
         comparator
         
     // Just an alias for withFunction but it makes it read better in calling code

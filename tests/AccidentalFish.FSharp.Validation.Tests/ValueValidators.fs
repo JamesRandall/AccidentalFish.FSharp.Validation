@@ -50,9 +50,9 @@ let isNotEqualToTests =
     
 [<Tests>]
 let hasMinValueOfTests =
-    testList "hasMinValueOf tests" [
+    testList "isGreaterThanOrEqualTo tests" [
         test "Returns ok when integer has minimum value" {
-            let comparator = hasMinValueOf 42
+            let comparator = isGreaterThanOrEqualTo 42
             
             let result = comparator propertyName 42
             
@@ -60,15 +60,15 @@ let hasMinValueOfTests =
         }
         
         test "Returns error when integer is less than minimum value" {
-            let comparator = hasMinValueOf 42
+            let comparator = isGreaterThanOrEqualTo 42
             
             let result = comparator propertyName 41
             
-            result |> expectErrorWithMessage "Must have a minimum value of 42" "hasMinValueOf"
+            result |> expectErrorWithMessage "Must have a minimum value of 42" "isGreaterThanOrEqualTo"
         }
         
         test "Returns ok when double has minimum value" {
-            let comparator = hasMinValueOf 42.
+            let comparator = isGreaterThanOrEqualTo 42.
             
             let result = comparator propertyName 42.
             
@@ -76,19 +76,19 @@ let hasMinValueOfTests =
         }
         
         test "Returns error when double is less than minimum value" {
-            let comparator = hasMinValueOf 42.42
+            let comparator = isGreaterThanOrEqualTo 42.42
             
             let result = comparator propertyName 41.9
             
-            result |> expectErrorWithMessage "Must have a minimum value of 42.42" "hasMinValueOf"
+            result |> expectErrorWithMessage "Must have a minimum value of 42.42" "isGreaterThanOrEqualTo"
         }
     ]
 
 [<Tests>]
 let hasMaxValueOfTests =
-    testList "hasMaxValueOf tests" [
+    testList "isLessThanOrEqualTo tests" [
         test "Returns ok when integer has maximum value" {
-            let comparator = hasMaxValueOf 42
+            let comparator = isLessThanOrEqualTo 42
             
             let result = comparator propertyName 42
             
@@ -96,15 +96,15 @@ let hasMaxValueOfTests =
         }
         
         test "Returns error when integer is greater than maximum value" {
-            let comparator = hasMaxValueOf 42
+            let comparator = isLessThanOrEqualTo 42
             
             let result = comparator propertyName 43
             
-            result |> expectErrorWithMessage "Must have a maximum value of 42" "hasMaxValueOf"
+            result |> expectErrorWithMessage "Must have a maximum value of 42" "isLessThanOrEqualTo"
         }
         
         test "Returns ok when double has maximum value" {
-            let comparator = hasMaxValueOf 42.
+            let comparator = isLessThanOrEqualTo 42.
             
             let result = comparator propertyName 42.
             
@@ -112,11 +112,11 @@ let hasMaxValueOfTests =
         }
         
         test "Returns error when double is greater than maximum value" {
-            let comparator = hasMaxValueOf 42.42
+            let comparator = isLessThanOrEqualTo 42.42
             
             let result = comparator propertyName 43.
             
-            result |> expectErrorWithMessage "Must have a maximum value of 42.42" "hasMaxValueOf"
+            result |> expectErrorWithMessage "Must have a maximum value of 42.42" "isLessThanOrEqualTo"
         }
     ]
 

@@ -28,7 +28,7 @@ let acceptanceTests =
             isEqualTo (ExampleModelId("abc"))            
         ]
         validate (fun m -> m.value) [
-            hasMinValueOf 0
+            isGreaterThanOrEqualTo 0
         ]
         validate (fun m -> m.subModel.stringValue) [
             hasLengthOf 10
@@ -62,7 +62,7 @@ let acceptanceTests =
             let result = model |> validateExampleModel
             result
                 |> expectError { message="Must not be empty" ; property = "id" ; errorCode = "isNotEmpty" }
-                |> expectError { message="Must have a minimum value of 0" ; property = "value" ; errorCode = "hasMinValueOf" }
+                |> expectError { message="Must have a minimum value of 0" ; property = "value" ; errorCode = "isGreaterThanOrEqualTo" }
                 |> expectError { message="Must have a length of 10" ; property = "subModel.stringValue" ; errorCode = "hasLengthOf" }
                 |> ignore
         }

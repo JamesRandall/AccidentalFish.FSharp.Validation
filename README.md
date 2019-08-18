@@ -37,7 +37,7 @@ let validateOrder = createValidatorFor<Order>() {
         hasMaxLengthOf 128
     ]
     validate (fun o -> o.cost) [
-        hasMinValueOf 0.
+        isGreaterThanOrEqualTo 0.
     ]    
 }
 ```
@@ -137,7 +137,7 @@ let validateOrderItem = createValidatorFor<OrderItem>() {
         hasMaxLengthOf 128
     }
     validate (fun i -> i.quantity) {
-        hasMinValueOf 1
+        isGreaterThanOrEqualTo 1
     }
 }
 
@@ -153,6 +153,142 @@ Again the property fields in the error items will be fully qualified and contain
 
     items.[0].productName
 
+## Conditional Validation
+
+_I'm still playing around with this a little but doc's as it stands now_
+
+### Using validateWhen
+
+If you just have conditional logic that applies to one or two properties validateWhen can be used to specifiy which per property validations to use under which conditions. Given the order model below:
+
+```fsharp
+type DiscountOrder = {
+    value: int
+    discountPercentage: int
+}
+```
+
+If we want to apply different validations to discountPercentage then we can do so using validateWhen as shown here:
+
+```fsharp
+let discountOrderValidator = createValidatorFor<DiscountOrder>() {
+        validateWhen (fun w -> w.value < 100) (fun o -> o.discountPercentage) [
+            isEqualTo 0
+        ]
+        validateWhen (fun w -> w.value >= 100) (fun o -> o.discountPercentage) [
+            isEqualTo 10
+        ]
+        validate (fun o -> o.value) [
+            isGreaterThan 0
+        ]
+    }
+```
+
+This will always validate that the value of the order is greater than 0. If the value is less than 100 it will ensure that the discount percentage is 0 and if the value is greater than or equal to 100 it will ensure the discount percentage is 10.
+
+### Using withValidatorWhen
+
+This validateWhen approach is fine if you have only single properties but if you have multiple properties bound by a condition then can result in a lot of repetition. In this scenario using _withValidatorWhen_ can be a better approach. Lets extend our order model to include an explanation for a discount - that we only want to be set when the discount is set:
+
+```fsharp
+type DiscountOrder = {
+    value: int
+    discountPercentage: int
+    discountExplanation: string
+}
+```
+
+Now we'll declare three validators:
+
+```fsharp
+let orderWithDiscount = createValidatorFor<DiscountOrder>() {
+    validate (fun o -> o.discountPercentage) [
+        isEqualTo 10
+    ]
+    validate (fun o -> o.discountExplanation) [
+        isNotEmpty
+    ]
+}
+
+let orderWithNoDiscount = createValidatorFor<DiscountOrder>() {
+    validate (fun o -> o.discountPercentage) [
+        isEqualTo 0
+    ]
+    validate (fun o -> o.discountExplanation) [
+        isEmpty
+    ]
+}
+
+let discountOrderValidator = createValidatorFor<DiscountOrder>() {
+    validate (fun o -> o) [
+        withValidatorWhen (fun o -> o.value < 100) orderWithNoDiscount
+        withValidatorWhen (fun o -> o.value >= 100) orderWithDiscount            
+    ]
+    validate (fun o -> o.value) [
+        isGreaterThan 0
+    ]
+}
+```
+
+The above can also be expressed more concisely in one block:
+
+```fsharp
+let validator = createValidatorFor<DiscountOrder>() {
+    validate (fun o -> o) [
+        withValidatorWhen (fun o -> o.value < 100) (createValidatorFor<DiscountOrder>() {
+            validate (fun o -> o) [
+                withValidatorWhen (fun o -> o.value < 100) orderWithNoDiscount
+                withValidatorWhen (fun o -> o.value >= 100) orderWithDiscount            
+            ]
+            validate (fun o -> o.value) [
+                isGreaterThan 0
+            ]
+        })
+        withValidatorWhen (fun o -> o.value >= 100) (createValidatorFor<DiscountOrder>() {
+            validate (fun o -> o.discountPercentage) [
+                isEqualTo 10
+            ]
+            validate (fun o -> o.discountExplanation) [
+                isNotEmpty
+            ]
+        })
+    ]
+    validate (fun o -> o.value) [
+        isGreaterThan 0
+    ]
+}
+```
+
+### Using A Function
+
+If your validation is particularly complex then you can simply use a function or custom validator (though you might want to consider if this kind of logic is best expressed in a non-declarative form).
+
+Custom validators are described in a section below. A function example follows:
+
+```fsharp
+type DiscountOrder = {
+    value: int
+    discountPercentage: int
+    discountExplanation: string
+}
+
+let validator = createValidatorFor<DiscountOrder>() {
+    validate (fun o -> o) [
+        withFunction (fun o ->
+            match o.value < 100 with
+            | true -> Ok
+            | false -> Errors([
+                {
+                    errorCode="greaterThanEqualTo100"
+                    message="Some error"
+                    property = "value"
+                }
+            ])
+        )
+    ]
+}
+```
+
 
 ## Built-in Validators
 
@@ -162,8 +298,11 @@ The library includes a number of basic value validators (as seen in the examples
 |-|-|
 |isEqualTo _expected_|Is the tested value equal to the expected value|
 |isNotEqualTo _unexpected_|Is the tested value not equal to the unexpected value|
-|hasMinValueOf _minValue_|Is the tested value greater than or equal to _minValue_|
-|hasMaxValueOf _maxValue_|Is the tested value greater tahn or equal to _maxValue_|
+|isGreaterThan _value_|Is the tested value greater than _value_|
+|isGreaterThanOrEqualTo _minValue_|Is the tested value greater than or equal to _minValue_|
+|isLessThan _value_|Is the tested value less than _value_|
+|isLessThanOrEqualTo _maxValue_|Is the tested value less than or equal to _maxValue_|
+|isEmpty|Is the tested value empty|
 |isNotEmpty|Is the sequence (including a string) not empty|
 |eachItemWith _validator_|Apply _validator_ to each item in a sequence|
 |hasLengthOf _length_|Is the sequence (including a string) of length _length_|
@@ -171,6 +310,7 @@ The library includes a number of basic value validators (as seen in the examples
 |hasMaxLengthOf _length_|Is the sequence (including a string) of a maximum length of _length_|
 |isNotEmptyOrWhitespace _value_|Is the tested value not empty and not whitespace|
 |withValidator _validator_|Applies the specified validator to the property. Is an alias of _withFunction_|
+|withValidatorWhen _predicate validator_|Applies the specified validator when a condition is met. See conditional validations above.|
 |withFunction _function_|Apples the given function to the property. The function must have a signature of _'validatorTargetType -> ValidationState_|
 
 I'll expand on this set over time. In the meantime it is easy to add additional validators as shown below.

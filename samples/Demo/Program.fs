@@ -28,6 +28,17 @@ type TrafficLight = {
     color: TrafficLightColor
 }
 
+type DiscountOrder = {
+    value: int
+    discountExplanation: string
+    discountPercentage: int
+}
+
+type OptionalExample = {
+    value: int
+    message: string option
+}
+
 [<EntryPoint>]
 let main _ =
     // A helper function to output
@@ -62,8 +73,8 @@ let main _ =
     // Set up a pair of validators
     let validateCustomer = createValidatorFor<Customer>() {
         validate (fun r -> r.age) [
-            hasMinValueOf 18
-            hasMaxValueOf 65
+            isGreaterThanOrEqualTo 18
+            isLessThanOrEqualTo 65
         ]
     }
     
@@ -73,7 +84,7 @@ let main _ =
             hasMaxLengthOf 128
         ]
         validate (fun r -> r.quantity) [
-            hasMinValueOf 1
+            isGreaterThanOrEqualTo 1
         ]
     }
 
@@ -83,7 +94,7 @@ let main _ =
             hasMaxLengthOf 128
         ]
         validate (fun r -> r.cost) [
-            hasMinValueOf 0.
+            isGreaterThan 0.
         ]
         validate (fun r -> r.customer) [
             withValidator validateCustomer
@@ -105,10 +116,10 @@ let main _ =
             hasMaxLengthOf 128
         ]
         validate (fun r -> r.cost) [
-            hasMinValueOf 0.
+            isGreaterThanOrEqualTo 0.
         ]
         validate (fun r -> r.customer.age) [
-            hasMinValueOf 18
+            isGreaterThanOrEqualTo 18
         ]
     }
     
@@ -138,6 +149,122 @@ let main _ =
     }
     
     { color = Amber } |> trafficLightValidator |> outputToConsole
+    
+    // Conditional validation using validateWhen
+    
+    let discountOrderValidatorWithValidateWhen = createValidatorFor<DiscountOrder>() {
+        validateWhen (fun w -> w.value < 100) (fun o -> o.discountPercentage) [
+            isEqualTo 0
+        ]
+        validateWhen (fun w -> w.value < 100) (fun o -> o.discountExplanation) [
+            isEmpty
+        ]
+        validateWhen (fun w -> w.value >= 100) (fun o -> o.discountPercentage) [
+            isEqualTo 10
+        ]
+        validateWhen (fun w -> w.value >= 100) (fun o -> o.discountExplanation) [
+            isNotEmpty
+        ]
+        validate (fun o -> o.value) [
+            isGreaterThan 0
+        ]
+    }
+    
+    printf "Discount should pass\n"
+    { value = 50 ; discountPercentage = 0; discountExplanation = "" } |> discountOrderValidatorWithValidateWhen |> outputToConsole
+    
+    printf "Should fail on explanation and discount being applied \n"
+    { value = 50 ; discountPercentage = 10; discountExplanation = "An explanation" } |> discountOrderValidatorWithValidateWhen |> outputToConsole
+    
+    printf "Should fail on missing discount explanation\n"
+    { value = 150 ; discountPercentage = 10; discountExplanation = "" } |> discountOrderValidatorWithValidateWhen |> outputToConsole
+    
+    printf "Should pass\n"
+    { value = 150 ; discountPercentage = 10; discountExplanation = "An explanation" } |> discountOrderValidatorWithValidateWhen |> outputToConsole
+    
+    let orderWithDiscount = createValidatorFor<DiscountOrder>() {
+        validate (fun o -> o.discountPercentage) [
+            isEqualTo 10
+        ]
+        validate (fun o -> o.discountExplanation) [
+            isNotEmpty
+        ]
+    }
+    let orderWithNoDiscount = createValidatorFor<DiscountOrder>() {
+        validate (fun o -> o.discountPercentage) [
+            isEqualTo 0
+        ]
+        validate (fun o -> o.discountExplanation) [
+            isEmpty
+        ]
+    }
+    
+    let discountOrderValidatorWithValidatorWhen = createValidatorFor<DiscountOrder>() {
+        validate (fun o -> o) [
+            withValidatorWhen (fun o -> o.value < 100) orderWithNoDiscount
+            withValidatorWhen (fun o -> o.value >= 100) orderWithDiscount            
+        ]
+        validate (fun o -> o.value) [
+            isGreaterThan 0
+        ]
+    }
+    
+    printf "Discount should pass\n"
+    { value = 50 ; discountPercentage = 0; discountExplanation = "" } |> discountOrderValidatorWithValidatorWhen |> outputToConsole
+    
+    printf "Should fail on explanation and discount being applied \n"
+    { value = 50 ; discountPercentage = 10; discountExplanation = "An explanation" } |> discountOrderValidatorWithValidatorWhen |> outputToConsole
+    
+    printf "Should fail on missing discount explanation\n"
+    { value = 150 ; discountPercentage = 10; discountExplanation = "" } |> discountOrderValidatorWithValidatorWhen |> outputToConsole
+    
+    printf "Should pass\n"
+    { value = 150 ; discountPercentage = 10; discountExplanation = "An explanation" } |> discountOrderValidatorWithValidatorWhen |> outputToConsole
+    
+    
+    let discountOrderValidatorWithValidatorWhen = createValidatorFor<DiscountOrder>() {
+        validate (fun o -> o) [
+            withValidatorWhen (fun o -> o.value < 100) (createValidatorFor<DiscountOrder>() {
+                validate (fun o -> o) [
+                    withValidatorWhen (fun o -> o.value < 100) orderWithNoDiscount
+                    withValidatorWhen (fun o -> o.value >= 100) orderWithDiscount            
+                ]
+                validate (fun o -> o.value) [
+                    isGreaterThan 0
+                ]
+            })
+            withValidatorWhen (fun o -> o.value >= 100) (createValidatorFor<DiscountOrder>() {
+                validate (fun o -> o.discountPercentage) [
+                    isEqualTo 10
+                ]
+                validate (fun o -> o.discountExplanation) [
+                    isNotEmpty
+                ]
+            })
+        ]
+        validate (fun o -> o.value) [
+            isGreaterThan 0
+        ]
+    }
+    
+    printf "Discount should pass\n"
+    { value = 50 ; discountPercentage = 0; discountExplanation = "" } |> discountOrderValidatorWithValidatorWhen |> outputToConsole
+    
+    printf "Should fail on explanation and discount being applied \n"
+    { value = 50 ; discountPercentage = 10; discountExplanation = "An explanation" } |> discountOrderValidatorWithValidatorWhen |> outputToConsole
+    
+    printf "Should fail on missing discount explanation\n"
+    { value = 150 ; discountPercentage = 10; discountExplanation = "" } |> discountOrderValidatorWithValidatorWhen |> outputToConsole
+    
+    printf "Should pass\n"
+    { value = 150 ; discountPercentage = 10; discountExplanation = "An explanation" } |> discountOrderValidatorWithValidatorWhen |> outputToConsole
+    
+    
+    let optionalValidator = createValidatorFor<OptionalExample>() {
+        validate (fun o -> o.message) [
+            
+        ]
+    }
     
     0
 
