@@ -32,7 +32,7 @@ let validateOrder = createValidatorFor<Order>() {
 }
 
 let order = {
-    id = ""
+    id = "36467DC0-AC0F-43E9-A92A-AC22C68F25D1"
     title = "A valid order"
     cost = 55.
 }
