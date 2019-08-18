@@ -154,7 +154,7 @@ Again the property fields in the error items will be fully qualified and contain
     items.[0].productName
 
 
-## Built-in Property Validators
+## Built-in Validators
 
 The library includes a number of basic value validators (as seen in the examples above):
 
