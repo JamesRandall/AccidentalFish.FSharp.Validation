@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>netcoreapp2.2</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Helpers.fs" />
+        <Compile Include="ValueValidators.fs" />
+        <Compile Include="Acceptance.fs" />
+        <Compile Include="Program.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Expecto" Version="8.11.0" />
+      <PackageReference Include="Expecto.BenchmarkDotNet" Version="8.11.0" />
+      <PackageReference Include="Expecto.FsCheck" Version="8.11.0" />
+      <PackageReference Include="Expecto.Hopac" Version="8.11.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\AccidentalFish.FSharp.Validation\AccidentalFish.FSharp.Validation.fsproj" />
+    </ItemGroup>
+
+</Project>

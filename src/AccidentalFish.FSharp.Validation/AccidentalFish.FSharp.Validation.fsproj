@@ -2,6 +2,18 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
+        <PackageVersion>0.9.0</PackageVersion>
+        <Title>Accidental Fish Validation</Title>
+        <Authors>James Randall</Authors>
+        <Description>Simple F# DSL style record validation framework </Description>
+        <Copyright>James Randall 2019</Copyright>
+        <PackageProjectUrl>https://github.com/JamesRandall/AccidentalFish.FSharp.Validation</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/JamesRandall/AccidentalFish.FSharp.Validation/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/JamesRandall/AccidentalFish.FSharp.Validation</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageTags>fsharp validation dsl computation expression</PackageTags>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
     <ItemGroup>

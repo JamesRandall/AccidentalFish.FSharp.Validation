@@ -1,11 +1,13 @@
 ﻿namespace AccidentalFish.FSharp
 open System
+open System.Linq.Expressions
 
 module Validation =
     type ValidationItem =
         {
             message: string
-            property: string option
+            property: string
+            errorCode: string
         }
         
     type ValidationState =
@@ -22,8 +24,19 @@ module Validation =
             properties: PropertyValidatorConfig list       
         }
         
-    let private packageValidator (propertyGetter:('targetType -> 'propertyType)) (validator:('propertyType -> ValidationState)) =
-        fun (value:obj) -> validator(propertyGetter(value :?> 'targetType))
+    let private getPropertyPath (expression:Expression<Func<'commandType, 'propertyType>>) =
+        let objectQualifiedExpression = expression.Body.ToString()
+        let indexOfDot = objectQualifiedExpression.IndexOf('.')
+        if indexOfDot = -1 then
+            objectQualifiedExpression
+        else 
+            objectQualifiedExpression.Substring(indexOfDot+1)
+        
+    let private packageValidator (propertyGetterExpr:Expression<Func<'targetType, 'propertyType>>) (validator:(string -> 'propertyType -> ValidationState)) =
+        let propertyName = propertyGetterExpr |> getPropertyPath
+        
+        let propertyGetter = propertyGetterExpr.Compile()                
+        fun (value:obj) -> validator propertyName (propertyGetter.Invoke(value :?> 'targetType)) 
                 
     type ValidatorBuilder<'targetType>() =
         member __.Yield (_: unit) : ValidatorConfig<'targetType> =
@@ -46,55 +59,83 @@ module Validation =
             
         [<CustomOperation("validate")>]
         member this.validate (config: ValidatorConfig<'targetType>,
-                              propertyGetter:('targetType -> 'propertyType),
-                              validatorFunctions:('propertyType -> ValidationState) list) =
+                              propertyGetter:Expression<Func<'targetType,'propertyType>>,
+                              validatorFunctions:(string -> 'propertyType -> ValidationState) list) =
              { config with properties =
                             config.properties |> Seq.append [{
                                 validators = validatorFunctions |> Seq.map (packageValidator propertyGetter) |> Seq.toList
                             }] |> Seq.toList }
              
+    // General validators
+    let isEqualTo comparisonValue =
+        let comparator propertyName value =
+            match value = comparisonValue with
+            | true -> Ok
+            | false -> Errors([{ message = sprintf "Must be equal to %O" comparisonValue; property = propertyName ; errorCode = "isEqualTo" }])
+        comparator
+        
+    let isNotEqualTo comparisonValue =
+        let comparator propertyName value =
+            match not (value = comparisonValue) with
+            | true -> Ok
+            | false -> Errors([{ message = sprintf "Must not be equal to %O" comparisonValue; property = propertyName ; errorCode = "isNotEqualTo" }])
+        comparator
+    
+    // Numeric validators    
     let hasMinValueOf minValue =
-        let comparator value =
+        let comparator propertyName value =
             match value >= minValue with
             | true -> Ok
-            | false -> Errors([{ message = sprintf "Must have a minimum value of %O" minValue; property = None }])
+            | false -> Errors([{ message = sprintf "Must have a minimum value of %O" minValue; property = propertyName ; errorCode = "hasMinValueOf" }])
         comparator
         
     let hasMaxValueOf maxValue =
-        let comparator value =
+        let comparator propertyName value =
             match value <= maxValue with
             | true -> Ok 
-            | false -> Errors([{ message = sprintf "Must have a max value of %O" maxValue; property = None}])
+            | false -> Errors([{ message = sprintf "Must have a maximum value of %O" maxValue; property = propertyName ; errorCode = "hasMaxValueOf" }])
         comparator
         
-    let isNotEmpty (value:string) =
+    // String validators        
+    let isNotEmpty propertyName (value:string) =
         if isNull(value) then
-            Errors([{ message = "Must not be null"; property = None }])
+            Errors([{ message = "Must not be null"; property = propertyName ; errorCode = "isNotEmpty" }])
         elif String.IsNullOrEmpty(value) then
-            Errors([{ message = "Must not be empty"; property = None }])
+            Errors([{ message = "Must not be empty"; property = propertyName ; errorCode = "isNotEmpty" }])
         elif String.IsNullOrWhiteSpace(value) then
-            Errors([{ message = "Must not be whitespace"; property = None }])
+            Errors([{ message = "Must not be whitespace"; property = propertyName ; errorCode = "isNotEmpty" }])
         else
             Ok
         
-    let hasExactLengthOf length =
-        let comparator (value:string) =
+    let hasLengthOf length =
+        let comparator propertyName (value:string) =
             match value.Length = length with
             | true -> Ok
-            | false -> Errors([{ message = sprintf "Must have a length value of %O" length; property = None }])
+            | false -> Errors([{ message = sprintf "Must have a length of %O" length; property = propertyName ; errorCode = "hasLengthOf" }])
+        comparator
+        
+    let hasMinLengthOf length =
+        let comparator propertyName (value:string) =
+            match value.Length >= length with
+            | true -> Ok
+            | false -> Errors([{ message = sprintf "Must have a length no less than %O" length; property = propertyName ; errorCode = "hasMinLengthOf" }])
         comparator
         
     let hasMaxLengthOf length =
-        let comparator (value:string) =
+        let comparator propertyName (value:string) =
             match value.Length <= length with
             | true -> Ok
-            | false -> Errors([{ message = sprintf "Must have a length no bigger than %O" length; property = None }])
+            | false -> Errors([{ message = sprintf "Must have a length no greater than %O" length; property = propertyName ; errorCode = "hasMaxLengthOf" }])
         comparator
         
+    // Function / sub-validators
     let withFunction (validatorFunc:('validatorTargetType->ValidationState)) =
-        let comparator (value:'validatorTargetType) =
+        let comparator _ (value:'validatorTargetType) =
             validatorFunc value            
         comparator
+        
+    // Just an alias for withFunction but it makes it read better in calling code
+    let withValidator = withFunction
         
     let createValidatorFor<'targetType>() =
         ValidatorBuilder<'targetType>()
