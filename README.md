@@ -7,7 +7,7 @@ A [sample console app](https://github.com/JamesRandall/AccidentalFish.FSharp.Val
 
 For issues and help please log them in the [Issues area](https://github.com/JamesRandall/AccidentalFish.FSharp.Validation/issues) or contact me on [Twitter](https://twitter.com/azuretrenches).
 
-You can also check out [my blog](https://www.azurefromthetrenches.com) for other .NET projects, articles, and cloud develoment.
+You can also check out [my blog](https://www.azurefromthetrenches.com) for other .NET projects, articles, and cloud architecture and development.
 
 ## Getting Started
 
