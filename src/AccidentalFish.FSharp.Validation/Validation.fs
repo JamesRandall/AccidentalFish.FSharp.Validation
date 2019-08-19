@@ -19,6 +19,10 @@ module Validation =
             predicate: (obj -> bool)
             validators: (obj -> ValidationState) list
         }
+        
+    type MatchResult<'propertyType> =
+        | Unwrapped of 'propertyType
+        | Ignore
     
     let private getPropertyPath (expression:Expression<Func<'commandType, 'propertyType>>) =
         let objectQualifiedExpression = expression.Body.ToString()
@@ -33,6 +37,25 @@ module Validation =
         
         let propertyGetter = propertyGetterExpr.Compile()                
         fun (value:obj) -> validator propertyName (propertyGetter.Invoke(value :?> 'targetType))
+        
+    let private packageValidatorWithSingleCaseUnwrapper (propertyGetterExpr:Expression<Func<'targetType, 'wrappedPropertyType>>)
+                                                        (unwrapper:'wrappedPropertyType -> 'propertyType)
+                                                        (validator:(string -> 'propertyType -> ValidationState)) =
+        let propertyName = propertyGetterExpr |> getPropertyPath
+        
+        let propertyGetter = propertyGetterExpr.Compile()                
+        fun (value:obj) -> validator propertyName (unwrapper (propertyGetter.Invoke(value :?> 'targetType)))
+        
+    let private packageValidatorWithUnwrapper (propertyGetterExpr:Expression<Func<'targetType, 'wrappedPropertyType>>)
+                                                        (unwrapper:'wrappedPropertyType -> MatchResult<'propertyType>)
+                                                        (validator:(string -> 'propertyType -> ValidationState)) =
+        let propertyName = propertyGetterExpr |> getPropertyPath
+        
+        let propertyGetter = propertyGetterExpr.Compile()                
+        fun (value:obj) ->
+            match (unwrapper (propertyGetter.Invoke(value :?> 'targetType))) with
+            | Unwrapped unwrappedValue -> validator propertyName unwrappedValue
+            | Ignore -> Ok
         
     let private packageValidatorRequired (propertyGetterExpr:Expression<Func<'targetType, 'propertyType option>>) (validator:(string -> 'propertyType -> ValidationState)) =
         let propertyName = propertyGetterExpr |> getPropertyPath
@@ -80,6 +103,32 @@ module Validation =
                 {
                     predicate = (fun _ -> true) |> packagePredicate 
                     validators = validatorFunctions |> Seq.map (packageValidator propertyGetter) |> Seq.toList
+                }
+            ] |> Seq.toList
+            
+        [<CustomOperation("validateSingleCaseUnion")>]
+        member this.validateSingleCaseUnion(config: PropertyValidatorConfig list,
+                                            propertyGetter:Expression<Func<'targetType,'wrappedPropertyType>>,
+                                            (unwrapper:'wrappedPropertyType -> 'propertyType),
+                                            validatorFunctions:(string -> 'propertyType -> ValidationState) list) =
+            config
+            |> Seq.append [
+                {
+                    predicate = (fun _ -> true) |> packagePredicate 
+                    validators = validatorFunctions |> Seq.map (packageValidatorWithSingleCaseUnwrapper propertyGetter unwrapper) |> Seq.toList
+                }
+            ] |> Seq.toList
+            
+        [<CustomOperation("validateUnion")>]
+        member this.validateUnion(config: PropertyValidatorConfig list,
+                                  propertyGetter:Expression<Func<'targetType,'wrappedPropertyType>>,
+                                  (unwrapper:'wrappedPropertyType -> MatchResult<'propertyType>),
+                                  validatorFunctions:(string -> 'propertyType -> ValidationState) list) =
+            config
+            |> Seq.append [
+                {
+                    predicate = (fun _ -> true) |> packagePredicate 
+                    validators = validatorFunctions |> Seq.map (packageValidatorWithUnwrapper propertyGetter unwrapper) |> Seq.toList
                 }
             ] |> Seq.toList
              
@@ -157,6 +206,11 @@ module Validation =
             | true -> Ok
             | false -> Errors([{ message = sprintf "Must not be equal to %O" comparisonValue; property = propertyName ; errorCode = "isNotEqualTo" }])
         comparator
+        
+    let isNotNull propertyName value =
+        match isNull(value) with
+        | true -> Errors([{ message = "Must not be null"; property = propertyName ; errorCode = "isNotNull" }])
+        | false -> Ok            
     
     // Numeric validators    
     let isGreaterThanOrEqualTo minValue =

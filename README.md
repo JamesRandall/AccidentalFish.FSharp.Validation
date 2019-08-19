@@ -289,6 +289,67 @@ let validator = createValidatorFor<DiscountOrder>() {
 }
 ```
 
+## Discriminated Unions
+
+### Single Case
+
+Its common to use single case unions for wrapping simple types and preventing, for example, misassignment. Consider the following model:
+
+```fsharp
+type CustomerId = CustomerId of string
+
+type Customer =
+    {
+        customerId: CustomerId
+    }
+```
+
+We might want to ensure the customer ID value is not empty and has a maximum length. One way to accomplish that would be to use a function (see Collections above) but the framework also has a validate command that supports unwrapping the value as shown below:
+
+```fsharp
+let unwrapCustomerId (CustomerId id) = id
+let validator = createValidatorFor<Customer>() {
+    validateSingleCaseUnion (fun c -> c.id) unwrapCustomerId [
+        isNotEmpty
+        hasMaxLengthOf 10
+    ]
+}
+```
+
+For an excellent article on single case union types see [F# for Fun and Profit](https://fsharpforfunandprofit.com/posts/designing-with-types-single-case-dus/).
+
+### Multiple Case
+
+We can handle multiple case discriminated unions using the validateUnion command. Consider the following model:
+
+```fsharp
+type MultiCaseUnion =
+    | NumericValue of double
+    | StringValue of string
+
+type UnionExample =
+    {
+        value: MultiCaseUnion
+    }
+```
+
+To validate the contents of the union we need to unwrap and apply the appropriate validators based on the union case which we can do as shown below:
+
+```fsharp
+let unionValidator = createValidatorFor<UnionExample>() {
+    validateUnion (fun o -> o.value) (fun v -> match v with | StringValue s -> Unwrapped(s) | _ -> Ignore) [
+        isNotEmpty
+        hasMinLengthOf 10
+    ]
+    
+    validateUnion (fun o -> o.value) (fun v -> match v with | NumericValue n -> Unwrapped(n) | _ -> Ignore) [
+        isGreaterThan 0.
+    ]
+}
+```
+
+Essentially the _validateUnion_ command takes a parameter that supports a match and it, itself, returns a discriminated union. Return _Unwrapped(value)_ to have the validation block run on the unwrapped value or return Ignore to have it skip that.
+
 ## Option Types
 
 To deal with option types in records use _validateRequired, validateUnrequired, validateRequiredWhen and validateUnrequiredWhen_ instead of the already introduced _validate_ and _validateWhen_ commands.
@@ -312,6 +373,7 @@ The library includes a number of basic value validators (as seen in the examples
 |isLessThanOrEqualTo _maxValue_|Is the tested value less than or equal to _maxValue_|
 |isEmpty|Is the tested value empty|
 |isNotEmpty|Is the sequence (including a string) not empty|
+|isNotNull|Ensure the value is not null|
 |eachItemWith _validator_|Apply _validator_ to each item in a sequence|
 |hasLengthOf _length_|Is the sequence (including a string) of length _length_|
 |hasMinLengthOf _length_|Is the sequence (including a string) of a minimum length of _length_|

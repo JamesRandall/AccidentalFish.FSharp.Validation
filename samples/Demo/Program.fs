@@ -39,6 +39,21 @@ type OptionalExample = {
     message: string option
 }
 
+type SingleCaseId = SingleCaseId of string
+
+type EntityWithSingleUnionId = {
+    id: SingleCaseId
+}
+
+type MultiCaseUnion =
+    | NumericValue of double
+    | StringValue of string
+
+type UnionExample =
+    {
+        value: MultiCaseUnion
+    }
+
 [<EntryPoint>]
 let main _ =
     // A helper function to output
@@ -286,6 +301,35 @@ let main _ =
     { value= 10 ; message = Some "0123456789a" } |> optionalUnrequiredValidator |> outputToConsole
     printf "Should pass due to having a message and it being within the length constraint\n"
     { value= 10 ; message = Some "0123456789" } |> optionalUnrequiredValidator |> outputToConsole
+    
+    
+    let unwrap (SingleCaseId id) = id
+    let singleCaseIdValidator = createValidatorFor<EntityWithSingleUnionId>() {
+        validateSingleCaseUnion (fun o -> o.id) unwrap [
+            isNotEmpty
+            hasMaxLengthOf 36
+        ]
+    }
+    
+    printf "Single case union validation should succeed\n"
+    { id = SingleCaseId("123") } |> singleCaseIdValidator |> outputToConsole
+    
+    
+    let unionValidator = createValidatorFor<UnionExample>() {
+        validateUnion (fun o -> o.value) (fun v -> match v with | StringValue s -> Unwrapped(s) | _ -> Ignore) [
+            isNotEmpty
+            hasMinLengthOf 10
+        ]
+        
+        validateUnion (fun o -> o.value) (fun v -> match v with | NumericValue n -> Unwrapped(n) | _ -> Ignore) [
+            isGreaterThan 0.
+        ]
+    }
+    
+    printf "Should fail validation on a string rule\n"
+    { value = StringValue("jim") } |> unionValidator |> outputToConsole
+    printf "Should fail validation on a numeric rule"
+    { value = NumericValue(-5.5) } |> unionValidator |> outputToConsole
     
     0
 
