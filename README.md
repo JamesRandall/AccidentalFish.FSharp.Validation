@@ -67,9 +67,7 @@ The below shows an example of outputting errors to the console:
 ```fsharp
 match validationResult with
 | Ok -> printf "No validation errors\n\n"
-| Errors errors ->
-    printf "**ERRORS**\n%s\n\n" (String.concat "\n" (errors |> Seq.map (fun e -> sprintf "%s: %s" e.property e.message)))
-
+| Errors errors -> printf "errors = %O" e
 ```
 
 ## Validating Complex Types
