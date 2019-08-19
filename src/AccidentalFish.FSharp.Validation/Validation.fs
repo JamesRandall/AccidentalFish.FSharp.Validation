@@ -307,21 +307,32 @@ module Validation =
         else
             Ok
                 
-    // Function / sub-validators
+    // Function
     let withFunction (validatorFunc:('validatorTargetType->ValidationState)) =
         let comparator _ (value:'validatorTargetType) =
             validatorFunc value            
         comparator
         
+    
+    // Sub-validators - very similar to functions but prefix the property name with the current property path
+    let private runChildValidator value propertyPath (validatorFunc:('validatorTargetType->ValidationState)) =
+        let buildPrefixedPropertyName error =
+            { error with property = sprintf "%s.%s" propertyPath error.property }
+        match (validatorFunc value) with
+        | Ok -> Ok
+        | Errors e -> Errors(e |> Seq.map buildPrefixedPropertyName |> Seq.toList)
+    
     let withValidatorWhen (predicate:'validatorTargetType->bool) (validatorFunc:('validatorTargetType->ValidationState)) =
-        let comparator _ (value:'validatorTargetType) =
+        let comparator propertyPath (value:'validatorTargetType) =
             match predicate(value) with
-            | true -> validatorFunc value
+            | true -> runChildValidator value propertyPath validatorFunc
             | false -> Ok            
         comparator
-        
-    // Just an alias for withFunction but it makes it read better in calling code
-    let withValidator = withFunction
+            
+    let withValidator (validatorFunc:('validatorTargetType->ValidationState)) =                
+        let comparator propertyPath (value:'validatorTargetType) =
+            runChildValidator value propertyPath validatorFunc
+        comparator
         
     let createValidatorFor<'targetType>() =
         ValidatorBuilder<'targetType>()

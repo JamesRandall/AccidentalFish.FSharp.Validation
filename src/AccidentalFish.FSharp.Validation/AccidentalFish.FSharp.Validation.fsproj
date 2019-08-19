@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <PackageVersion>0.10.0</PackageVersion>
+        <PackageVersion>0.10.1</PackageVersion>
         <Title>Accidental Fish Validation</Title>
         <Authors>James Randall</Authors>
         <Description>Simple F# DSL style record validation framework </Description>
